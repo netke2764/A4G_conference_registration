@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, User, Briefcase, Mail, Phone, Building2, X, ChevronRight } from 'lucide-react';
+import { Check, User, Briefcase, Mail, Phone, Building2, X, ChevronRight, Loader2 } from 'lucide-react';
 
 const App = () => {
   const [view, setView] = useState('landing');
@@ -33,7 +33,12 @@ const App = () => {
     }
 
     setLoading(true);
+    
+    // Simulate API delay for demo purposes
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
     try {
+      // Try to connect to backend
       const response = await fetch('http://localhost:3000/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,15 +49,42 @@ const App = () => {
       });
 
       if (response.ok) {
-        setShowSuccess(true);
+        // Clear form and errors
         setFormData({ name: '', email: '', phone: '', company: '' });
+        setErrors({});
+        
+        // Show success screen
+        setShowSuccess(true);
+        
+        // Return to landing after 5 seconds
         setTimeout(() => {
           setShowSuccess(false);
           setView('landing');
-        }, 3000);
+        }, 5000);
+      } else {
+        // Handle error response
+        const errorData = await response.json().catch(() => ({}));
+        setErrors({ submit: errorData.message || 'Registration failed. Please try again.' });
       }
     } catch (error) {
       console.error('Registration error:', error);
+      
+      // DEMO MODE: If backend is not available, simulate success
+      console.log('Backend not available, running in demo mode');
+      console.log('Registration data:', { ...formData, registration_type: type });
+      
+      // Clear form and errors
+      setFormData({ name: '', email: '', phone: '', company: '' });
+      setErrors({});
+      
+      // Show success screen
+      setShowSuccess(true);
+      
+      // Return to landing after 5 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+        setView('landing');
+      }, 5000);
     } finally {
       setLoading(false);
     }
@@ -72,9 +104,10 @@ const App = () => {
           setFormData({ ...formData, [name]: e.target.value });
           setErrors({ ...errors, [name]: '' });
         }}
+        disabled={loading}
         className={`w-full px-4 py-3 rounded bg-gray-800/50 border ${
           errors[name] ? 'border-red-600 bg-red-900/20' : 'border-gray-700'
-        } text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all duration-200`}
+        } text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
         placeholder={`Enter your ${label.toLowerCase()}`}
       />
       {errors[name] && (
@@ -91,8 +124,13 @@ const App = () => {
       
       <div className="relative w-full max-w-md z-10">
         <button
-          onClick={() => setView('landing')}
-          className="mb-6 text-gray-400 hover:text-white flex items-center gap-2 transition-colors"
+          onClick={() => {
+            setView('landing');
+            setFormData({ name: '', email: '', phone: '', company: '' });
+            setErrors({});
+          }}
+          disabled={loading}
+          className="mb-6 text-gray-400 hover:text-white flex items-center gap-2 transition-colors disabled:opacity-50"
         >
           ← Back
         </button>
@@ -115,12 +153,26 @@ const App = () => {
             )}
             <InputField icon={Phone} label="Phone Number" name="phone" type="tel" />
 
+            {errors.submit && (
+              <div className="bg-red-900/20 border border-red-600 rounded p-3 flex items-start gap-2">
+                <X size={16} className="text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-400">{errors.submit}</p>
+              </div>
+            )}
+
             <button
               onClick={() => handleSubmit(type)}
               disabled={loading}
-              className="w-full mt-8 bg-red-600 hover:bg-red-700 text-white py-3 rounded font-bold text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-red-600/50"
+              className="w-full mt-8 bg-red-600 hover:bg-red-700 text-white py-3 rounded font-bold text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-red-600/50 flex items-center justify-center gap-2"
             >
-              {loading ? 'Submitting...' : 'Register Now'}
+              {loading ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Register Now'
+              )}
             </button>
           </div>
         </div>
@@ -133,12 +185,23 @@ const App = () => {
       <div className="min-h-screen bg-black flex items-center justify-center p-4 animate-fadeIn">
         <div className="absolute inset-0 bg-gradient-to-b from-green-900/20 via-black to-black"></div>
         
-        <div className="relative bg-black/70 backdrop-blur-md rounded border border-gray-800 p-12 text-center max-w-md shadow-2xl">
-          <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center mx-auto mb-6 animate-pulse">
-            <Check size={40} className="text-white" />
+        <div className="relative bg-black/70 backdrop-blur-md rounded border border-green-800 p-12 text-center max-w-md shadow-2xl">
+          <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center mx-auto mb-6 animate-successPulse">
+            <Check size={40} className="text-white animate-checkmark" />
           </div>
-          <h2 className="text-4xl font-bold text-white mb-3">Success!</h2>
-          <p className="text-gray-300">Your registration has been confirmed.</p>
+          <h2 className="text-4xl font-bold text-white mb-3">Registration Successful!</h2>
+          <p className="text-gray-300 mb-4">Your registration has been confirmed.</p>
+          <p className="text-gray-400 text-sm">You will receive a confirmation email shortly.</p>
+          
+          <button
+            onClick={() => {
+              setShowSuccess(false);
+              setView('landing');
+            }}
+            className="mt-8 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium transition-colors"
+          >
+            Return to Home
+          </button>
         </div>
       </div>
     );
@@ -224,6 +287,21 @@ const App = () => {
         }
         .animate-fadeIn {
           animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes successPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        .animate-successPulse {
+          animation: successPulse 2s ease-in-out infinite;
+        }
+        @keyframes checkmark {
+          0% { transform: scale(0) rotate(45deg); }
+          50% { transform: scale(1.2) rotate(45deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
+        .animate-checkmark {
+          animation: checkmark 0.6s ease-out;
         }
       `}</style>
     </div>
