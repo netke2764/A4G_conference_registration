@@ -28,6 +28,8 @@ const RegistrationSchema = new mongoose.Schema({
 const Registration = mongoose.model("Registration", RegistrationSchema);
 
 // ----- API Routes -----
+
+// Save data
 app.post("/api/register", async (req, res) => {
   try {
     const data = await Registration.create(req.body);
@@ -35,6 +37,17 @@ app.post("/api/register", async (req, res) => {
   } catch (err) {
     console.error("❌ Registration error:", err);
     res.status(500).json({ error: "Registration failed" });
+  }
+});
+
+// Fetch all data
+app.get("/api/registrations", async (req, res) => {
+  try {
+    const data = await Registration.find().sort({ created_at: -1 });
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch data" });
   }
 });
 
