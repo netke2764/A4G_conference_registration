@@ -5,22 +5,20 @@ const App = () => {
   const [view, setView] = useState('landing');
   const [showSuccess, setShowSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    company: ''
-  });
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [company, setCompany] = useState('');
   const [errors, setErrors] = useState({});
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const validateForm = (type) => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!validateEmail(formData.email)) newErrors.email = 'Invalid email format';
-    if (type === 'professional' && !formData.company.trim()) 
+    if (!name.trim()) newErrors.name = 'Name is required';
+    if (!email.trim()) newErrors.email = 'Email is required';
+    else if (!validateEmail(email)) newErrors.email = 'Invalid email format';
+    if (type === 'professional' && !company.trim()) 
       newErrors.company = 'Company is required';
     return newErrors;
   };
@@ -33,54 +31,38 @@ const App = () => {
     }
 
     setLoading(true);
-    
-    // Simulate API delay for demo purposes
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     try {
-      // Try to connect to backend
       const response = await fetch('http://localhost:3000/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          name,
+          email,
+          phone,
+          company,
           registration_type: type
         })
       });
 
       if (response.ok) {
-        // Clear form and errors
-        setFormData({ name: '', email: '', phone: '', company: '' });
-        setErrors({});
-        
-        // Show success screen
+        resetForm();
         setShowSuccess(true);
-        
-        // Return to landing after 5 seconds
         setTimeout(() => {
           setShowSuccess(false);
           setView('landing');
         }, 5000);
       } else {
-        // Handle error response
         const errorData = await response.json().catch(() => ({}));
         setErrors({ submit: errorData.message || 'Registration failed. Please try again.' });
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      
-      // DEMO MODE: If backend is not available, simulate success
       console.log('Backend not available, running in demo mode');
-      console.log('Registration data:', { ...formData, registration_type: type });
+      console.log('Registration data:', { name, email, phone, company, registration_type: type });
       
-      // Clear form and errors
-      setFormData({ name: '', email: '', phone: '', company: '' });
-      setErrors({});
-      
-      // Show success screen
+      resetForm();
       setShowSuccess(true);
-      
-      // Return to landing after 5 seconds
       setTimeout(() => {
         setShowSuccess(false);
         setView('landing');
@@ -90,95 +72,18 @@ const App = () => {
     }
   };
 
-  const InputField = ({ icon: Icon, label, name, type = 'text', required = false }) => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
-        <Icon size={16} className="text-red-500" />
-        {label} {!required && <span className="text-gray-500 text-xs">(optional)</span>}
-      </label>
-      <input
-        type={type}
-        name={name}
-        value={formData[name]}
-        onChange={(e) => {
-          setFormData({ ...formData, [name]: e.target.value });
-          setErrors({ ...errors, [name]: '' });
-        }}
-        disabled={loading}
-        className={`w-full px-4 py-3 rounded bg-gray-800/50 border ${
-          errors[name] ? 'border-red-600 bg-red-900/20' : 'border-gray-700'
-        } text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
-        placeholder={`Enter your ${label.toLowerCase()}`}
-      />
-      {errors[name] && (
-        <p className="text-xs text-red-400 flex items-center gap-1">
-          <X size={12} /> {errors[name]}
-        </p>
-      )}
-    </div>
-  );
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setCompany('');
+    setErrors({});
+  };
 
-  const FormView = ({ type, title, icon: Icon }) => (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4 animate-fadeIn">
-      <div className="absolute inset-0 bg-gradient-to-b from-red-900/20 via-black to-black"></div>
-      
-      <div className="relative w-full max-w-md z-10">
-        <button
-          onClick={() => {
-            setView('landing');
-            setFormData({ name: '', email: '', phone: '', company: '' });
-            setErrors({});
-          }}
-          disabled={loading}
-          className="mb-6 text-gray-400 hover:text-white flex items-center gap-2 transition-colors disabled:opacity-50"
-        >
-          ← Back
-        </button>
-        
-        <div className="bg-black/70 backdrop-blur-md rounded border border-gray-800 p-8 shadow-2xl">
-          <div className="flex items-center justify-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center">
-              <Icon size={32} className="text-white" />
-            </div>
-          </div>
-          
-          <h2 className="text-3xl font-bold text-center text-white mb-2">{title}</h2>
-          <p className="text-center text-gray-400 text-sm mb-8">Fill in your details to register</p>
-
-          <div className="space-y-5">
-            <InputField icon={User} label="Full Name" name="name" required />
-            <InputField icon={Mail} label="Email" name="email" type="email" required />
-            {type === 'professional' && (
-              <InputField icon={Building2} label="Company" name="company" required />
-            )}
-            <InputField icon={Phone} label="Phone Number" name="phone" type="tel" />
-
-            {errors.submit && (
-              <div className="bg-red-900/20 border border-red-600 rounded p-3 flex items-start gap-2">
-                <X size={16} className="text-red-400 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-red-400">{errors.submit}</p>
-              </div>
-            )}
-
-            <button
-              onClick={() => handleSubmit(type)}
-              disabled={loading}
-              className="w-full mt-8 bg-red-600 hover:bg-red-700 text-white py-3 rounded font-bold text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-red-600/50 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                'Register Now'
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const handleBack = () => {
+    setView('landing');
+    resetForm();
+  };
 
   if (showSuccess) {
     return (
@@ -207,12 +112,153 @@ const App = () => {
     );
   }
 
-  if (view === 'student') {
-    return <FormView type="student" title="Student Registration" icon={User} />;
-  }
+  if (view === 'student' || view === 'professional') {
+    const isStudent = view === 'student';
+    const Icon = isStudent ? User : Briefcase;
+    const title = isStudent ? 'Student Registration' : 'Professional Registration';
 
-  if (view === 'professional') {
-    return <FormView type="professional" title="Professional Registration" icon={Briefcase} />;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4 animate-fadeIn">
+        <div className="absolute inset-0 bg-gradient-to-b from-red-900/20 via-black to-black"></div>
+        
+        <div className="relative w-full max-w-md z-10">
+          <button
+            onClick={handleBack}
+            disabled={loading}
+            className="mb-6 text-gray-400 hover:text-white flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            ← Back
+          </button>
+          
+          <div className="bg-black/70 backdrop-blur-md rounded border border-gray-800 p-8 shadow-2xl">
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center">
+                <Icon size={32} className="text-white" />
+              </div>
+            </div>
+            
+            <h2 className="text-3xl font-bold text-center text-white mb-2">{title}</h2>
+            <p className="text-center text-gray-400 text-sm mb-8">Fill in your details to register</p>
+
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                  <User size={16} className="text-red-500" />
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+                  }}
+                  disabled={loading}
+                  className={`w-full px-4 py-3 rounded bg-gray-800/50 border ${
+                    errors.name ? 'border-red-600 bg-red-900/20' : 'border-gray-700'
+                  } text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+                  placeholder="Enter your full name"
+                />
+                {errors.name && (
+                  <p className="text-xs text-red-400 flex items-center gap-1">
+                    <X size={12} /> {errors.name}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                  <Mail size={16} className="text-red-500" />
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
+                  }}
+                  disabled={loading}
+                  className={`w-full px-4 py-3 rounded bg-gray-800/50 border ${
+                    errors.email ? 'border-red-600 bg-red-900/20' : 'border-gray-700'
+                  } text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+                  placeholder="Enter your email"
+                />
+                {errors.email && (
+                  <p className="text-xs text-red-400 flex items-center gap-1">
+                    <X size={12} /> {errors.email}
+                  </p>
+                )}
+              </div>
+
+              {view === 'professional' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                    <Building2 size={16} className="text-red-500" />
+                    Company
+                  </label>
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={(e) => {
+                      setCompany(e.target.value);
+                      if (errors.company) setErrors(prev => ({ ...prev, company: '' }));
+                    }}
+                    disabled={loading}
+                    className={`w-full px-4 py-3 rounded bg-gray-800/50 border ${
+                      errors.company ? 'border-red-600 bg-red-900/20' : 'border-gray-700'
+                    } text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+                    placeholder="Enter your company"
+                  />
+                  {errors.company && (
+                    <p className="text-xs text-red-400 flex items-center gap-1">
+                      <X size={12} /> {errors.company}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                  <Phone size={16} className="text-red-500" />
+                  Phone Number <span className="text-gray-500 text-xs">(optional)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-4 py-3 rounded bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Enter your phone number"
+                />
+              </div>
+
+              {errors.submit && (
+                <div className="bg-red-900/20 border border-red-600 rounded p-3 flex items-start gap-2">
+                  <X size={16} className="text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-400">{errors.submit}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => handleSubmit(view)}
+                disabled={loading}
+                className="w-full mt-8 bg-red-600 hover:bg-red-700 text-white py-3 rounded font-bold text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-red-600/50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Register Now'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
